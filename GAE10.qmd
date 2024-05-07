@@ -1,6 +1,6 @@
 ---
 title: "GAE10: PCA & NMDS"
-author: "Your Name Here"
+author: "Sydney Phillips"
 format: 
   html:
     theme: custom.scss
@@ -25,6 +25,12 @@ library(latex2exp)
 library(patchwork)
 library(kableExtra)
 library(tidyverse)
+library(ggrepel)
+library(FactoMineR)
+library(factoextra)
+library(vegan)
+library(missMDA)
+
 
 options(scipen = 10)
 
@@ -52,6 +58,8 @@ knitr::include_graphics("Kingfishers.png")
 
 #### Statistical Methods:
 
+I used principle components analysis to look at patterns of coloration. All analysis was conducted in R[@base] using tidyverse, [@tidyverse]kableExtra, [@kableExtra]FactoMineR,[@FactoMineR] and factoextra[@factoextra] packages.
+
 ```{r}
 #| label: Scenario1DataImport
 
@@ -62,7 +70,78 @@ knitr::include_graphics("Kingfishers.png")
 # colors.csv. Please explore any grouping and/or patterning among the species
 # and their ecological/behavioral traits.
 
+
+colors <- read_csv("colors.csv", show_col_types = FALSE)
+
 ```
+
+```{r}
+#| label: fig-scenario1biplot
+#| fig-cap: "PCA of colors of Kingfishers, organized by specialization"
+
+colorsPCA <- PCA(
+  colors,
+                 quanti.sup = 13,
+                 quali.sup = c(1,14:17),
+                 graph=FALSE
+                 )
+fviz_pca_ind(
+  colorsPCA,
+  repel = TRUE,
+  label = "none",
+  habillage = c(
+    "Light_environment",
+    "Parental_care",
+    "Territoriality",
+    "Hunting_strategy"
+    
+  ),
+  
+  addEllipses = TRUE)
+
+
+
+```
+
+Based on this PCA, as seen in @fig-scenario1biplot, we can see that in regard to hunting strategy, water divers and ground dwellers seem to typically have less bright hues than their aerial and ground catche counterparts. In regard to light environment, forest dwellers are clustered into the bottom left quadrant, meaning that their coloring is less bright blue than counterparts. However, in regard to parental care and territoriality, there seems to be little correlation between color and these relationships. For further analysis of what seems to be the most significant relationship, see @fig-scenario1biplot2.
+
+```{r}
+#| label: fig-scenario1biplot2
+#| fig-cap: "Respective variable and individual PCA of color of kingfisers as an entire analysis, as well as an individual analysis based on hunting strategy."
+#| fig-asp: 1
+
+colorsPCA <- PCA(
+  colors,
+                 quanti.sup = 13,
+                 quali.sup = c(1,14:17),
+                 graph=FALSE
+                 )
+ indfig <-fviz_pca_ind(
+  colorsPCA,
+  repel = TRUE,
+  label = "none",
+  habillage = c(
+    #"Light_environment",
+   # "Parental_care",
+    #"Territoriality",
+    "Hunting_strategy"))
+ varfig <- fviz_pca_var(
+   colorsPCA,
+   repel = TRUE,
+   label = "var"
+ )
+ varfig +
+   indfig +
+   plot_layout(ncol = 1)
+  
+
+
+
+
+
+```
+
+After examination of the principle component analysis, the PCA 1 seemed to analyze the feather type and length of the birds, and the PCA 2 analyzed the colors of the feathers with regards to bird behavior. Hunting strategy had the most significant effect on separation of species based on coloration, as modeled in @fig-scenario1biplot2.
 
 ### References:
 
@@ -88,6 +167,52 @@ In Summer 2011, the researchers visited 17 deer exclosures in upland forests of 
 # Use NMDS to explore the differences in plant community inside and outside the
 # deer exclosures, then test for differences in the plant communities between
 # the deer exclosures and the adjacent forests.
+deer <- read_csv("Sabo_etal_data.csv", show_col_types = FALSE)
 ```
+
+```{r}
+#| label: scen2nMDS
+#| results: "hide"
+
+  scen2mds <- metaMDS(
+    deer[,-c(1:2)],
+    k=4
+    
+  )
+  
+  scen2mds$stress
+```
+
+```{r}
+#| label: tbl-scen2PERMANOVA
+#| tbl-cap: "PERMANOVA to test for a difference in plant assemblages between deer  exclusion areas and adjacent areas."
+
+  deerPERMANOVA <- adonis2(
+    deer[, -c(1,2)] ~ Treatment, 
+    data= deer,
+    by = "margin",  
+    permutations = 10001   
+  )
+  
+  kbl(
+    deerPERMANOVA,
+    format = "markdown",
+    digits = c(0,3,3,3,3),
+    col.names = c(
+      "df",
+      "SS",
+      "$R^2$",
+      "F",
+      "P"
+    )
+  )
+
+```
+
+```{r}
+
+```
+
+This computation gave us a p value of 0.987, which would result in rejection of the null hypothesis, which was that the communities were equal. Based on this PERMANOVA, there is no difference in communities.
 
 ### References:
